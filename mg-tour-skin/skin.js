@@ -1,0 +1,85 @@
+(function(){
+  'use strict';
+  const scriptBase=new URL('.',(document.currentScript.src||document.baseURI)).href;
+  const icons={arrow:'<path d="M5 12h14m-5-5 5 5-5 5"/>',back:'<path d="M19 12H5m5-5-5 5 5 5"/>',grid:'<rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/>',info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v.2"/>',pin:'<path d="M19 10c0 5-7 10-7 10S5 15 5 10a7 7 0 1 1 14 0Z"/><circle cx="12" cy="10" r="2"/>',menu:'<path d="M5 7h14M5 12h14M5 17h14"/>',close:'<path d="m6 6 12 12M6 18 18 6"/>',phone:'<path d="m8 3 3 5-3 2c1 3 3 5 6 6l2-3 5 3c0 3-2 5-5 5C9 20 4 15 3 8c0-3 2-5 5-5Z"/>',instagram:'<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><path d="M17 7h.01"/>',fullscreen:'<path d="M8 3H3v5m13-5h5v5M3 16v5h5m8 0h5v-5"/>',spark:'<path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5Z"/>'};
+  const icon=n=>'<svg aria-hidden="true" viewBox="0 0 24 24">'+icons[n]+'</svg>';
+  const escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  window.MGTourSkin={mount(engine,config){
+    if(document.getElementById('sat-skin'))return;
+    if(!document.querySelector('[data-sat-css]')&&!Array.from(document.styleSheets).some(s=>s.href&&s.href===new URL('skin.css',scriptBase).href)){
+      const link=document.createElement('link');link.rel='stylesheet';link.href=new URL('skin.css',scriptBase);link.dataset.satCss='';document.head.appendChild(link);
+    }
+    const initial=engine.getState(),preview=initial.mode==='preview',scenes=config.scenes;
+    let index=Number.isInteger(initial.index)&&initial.index>=0?initial.index:0,opener=null,closeTimer=null;
+    const root=document.createElement('div');root.id='sat-skin';root.classList.toggle('sat-integrated',!preview);root.classList.toggle('sat-reduced',matchMedia('(prefers-reduced-motion:reduce)').matches);
+    const image=s=>config.assets?.[s.file]||new URL(s.file,config.assetBase).href;
+    const step=(s,i)=>'<button class="sat-step" data-scene="'+i+'" aria-label="Visitar '+escape(s.name)+'"><span class="sat-number">0'+(i+1)+'</span><span><b>'+escape(s.name)+'</b><small>'+escape(s.step)+'</small></span>'+icon('arrow')+'</button>';
+    root.innerHTML=`<div class="sat-shell"><aside class="sat-sidebar" aria-label="Navegação da visita"><div class="sat-brand"><img src="${config.logo||config.assetBase+'marca-instagram-original.jpg'}" alt="Marca Salute a Te"><div><strong>Salute a Te</strong><small>Excelência em saúde</small></div></div><button class="sat-icon sat-mobile-menu" data-panel="menu" aria-label="Abrir menu">${icon('menu')}</button><div class="sat-intro"><p class="sat-eyebrow">Conheça a clínica</p><h1>Um novo olhar<br>para o cuidado.</h1><p>Explore os ambientes.<br>Sinta-se bem-vindo.</p></div><nav class="sat-steps" aria-label="Ambientes">${scenes.map(step).join('')}</nav><div class="sat-side-links"><button class="sat-link" data-panel="about">${icon('info')} A clínica</button><button class="sat-link" data-panel="scenes">${icon('grid')} Todos os ambientes</button><button class="sat-link" data-panel="location">${icon('pin')} Como chegar</button></div><p class="sat-side-location">Millenium Shopping<br>Manaus · Amazonas</p><div class="sat-credit">EXPERIÊNCIA POR MG TOUR 360°</div></aside><main class="sat-stage" aria-label="Visualização do ambiente"><div class="sat-backdrops">${scenes.map((s,i)=>`<img class="sat-backdrop" data-image="${i}" src="${image(s)}" alt="${escape(s.name)} — ambiente ilustrativo criado por IA">`).join('')}</div><div class="sat-shade"></div><div class="sat-top"><div class="sat-breadcrumb"><span>${preview?'Proposta de tour 360°':'Tour 360°'}</span> &nbsp; / &nbsp; <b data-scene-name></b></div><div class="sat-top-actions"><button class="sat-cta" data-panel="contact">Agendar consulta ${icon('arrow')}</button><button class="sat-icon sat-glass sat-fullscreen" data-action="fullscreen" aria-label="Tela cheia">${icon('fullscreen')}</button><button class="sat-icon sat-glass" data-panel="menu" aria-label="Abrir menu">${icon('menu')}</button></div></div><button class="sat-hotspot" data-action="next" aria-label="Conhecer o próximo ambiente"><span class="sat-orbit">${icon('arrow')}</span><span class="sat-hotspot-label" data-next-name></span></button><section class="sat-welcome"><p class="sat-eyebrow" data-step></p><h2 data-title></h2><p class="sat-description" data-subtitle></p><button class="sat-detail" data-panel="detail">Sobre este ambiente ${icon('arrow')}</button></section><div class="sat-bottom"><div class="sat-view-control sat-glass"><span>Explore no seu ritmo<strong data-counter></strong></span><button class="sat-arrow" data-action="previous" aria-label="Ambiente anterior">${icon('back')}</button><button class="sat-arrow" data-action="next" aria-label="Próximo ambiente">${icon('arrow')}</button></div><div class="sat-disclaimer">${preview?'ESTUDO VISUAL · IMAGENS POR IA<br>Ambientes ilustrativos.':'Explore os ambientes da clínica.'}</div><button class="sat-next sat-glass" data-action="next"><span><small>Continue a visita</small><b data-next-name></b></span>${icon('arrow')}</button></div></main><nav class="sat-mobilebar" aria-label="Acesso rápido"><button data-panel="scenes">${icon('grid')} Ambientes</button><button data-panel="about">${icon('info')} A clínica</button><button class="sat-cta" data-panel="contact">Agendar ${icon('arrow')}</button></nav></div><dialog class="sat-dialog" aria-labelledby="sat-dialog-title"><header class="sat-dialog-head"><div><p class="sat-eyebrow">Salute a Te</p><h2 id="sat-dialog-title"></h2></div><button class="sat-close" aria-label="Fechar painel" data-action="close">${icon('close')}</button></header><div class="sat-dialog-content"></div></dialog><div class="sat-announcer" role="status" aria-live="polite"></div>`;
+    document.body.appendChild(root);
+    const gapProbe=document.createElement('div');gapProbe.style.cssText='position:absolute;visibility:hidden;display:flex;flex-direction:column;row-gap:1px';gapProbe.innerHTML='<div style="height:1px"></div><div style="height:1px"></div>';root.appendChild(gapProbe);root.classList.toggle('sat-no-flex-gap',gapProbe.scrollHeight!==3);gapProbe.remove();
+    const q=s=>root.querySelector(s),qa=s=>[...root.querySelectorAll(s)],dialog=q('dialog'),content=q('.sat-dialog-content');
+    const legacyDialog=typeof dialog.showModal!=='function'||new URLSearchParams(location.search).get('compat')==='legacy';
+    const shell=q('.sat-shell'),veil=document.createElement('div');veil.className='sat-modal-veil';veil.hidden=true;root.insertBefore(veil,dialog);
+    if(legacyDialog){dialog.classList.add('sat-fallback');dialog.setAttribute('role','dialog');dialog.setAttribute('aria-modal','true');}
+    const isOpen=()=>dialog.hasAttribute('open');
+    function showDialog(){if(legacyDialog){dialog.setAttribute('open','');veil.hidden=false;shell.setAttribute('aria-hidden','true');shell.setAttribute('inert','');root.classList.add('sat-modal-open')}else dialog.showModal();}
+    function hideDialog(){if(legacyDialog){dialog.removeAttribute('open');veil.hidden=true;shell.removeAttribute('aria-hidden');shell.removeAttribute('inert');root.classList.remove('sat-modal-open')}else dialog.close();}
+    let viewportFrame=0;
+    function syncViewport(){cancelAnimationFrame(viewportFrame);viewportFrame=requestAnimationFrame(()=>{const vv=window.visualViewport;if(vv&&vv.scale>1.01)return;const h=vv?vv.height:window.innerHeight;root.style.setProperty('--sat-viewport-height',Math.max(1,h)+'px');root.style.setProperty('--sat-offset-top',(vv?vv.offsetTop:0)+'px');});}
+    window.addEventListener('resize',syncViewport);window.addEventListener('orientationchange',syncViewport);window.addEventListener('pageshow',syncViewport);if(window.visualViewport){visualViewport.addEventListener('resize',syncViewport);visualViewport.addEventListener('scroll',syncViewport)}syncViewport();
+    if(!document.documentElement.requestFullscreen){q('.sat-fullscreen').hidden=true;}
+    function update(state){
+      if(!scenes[state.index]){q('.sat-announcer').textContent='O panorama atual ainda não foi associado a um ambiente.';return;}
+      index=state.index;const current=scenes[index],next=scenes[(index+1)%scenes.length];
+      qa('[data-scene-name]').forEach(e=>e.textContent=current.name);
+      qa('[data-next-name]').forEach(e=>e.textContent=next.name);
+      q('[data-title]').innerHTML=current.title;
+      q('[data-subtitle]').textContent=current.subtitle;
+      q('[data-step]').textContent='0'+(index+1)+' / '+current.step;
+      q('[data-counter]').textContent='0'+(index+1)+' — 0'+scenes.length;
+      qa('[data-scene]').forEach(e=>e.setAttribute('aria-current',String(Number(e.dataset.scene)===index)));
+      qa('[data-image]').forEach(e=>{const active=Number(e.dataset.image)===index;e.classList.toggle('is-current',active);e.setAttribute('aria-hidden',String(!active));});
+      const welcome=q('.sat-welcome');welcome.classList.remove('sat-animating');void welcome.offsetWidth;welcome.classList.add('sat-animating');
+      q('.sat-announcer').textContent=current.name+(preview?' — ambiente ilustrativo.':'');
+    }
+    function navigate(n){
+      const target=(Number(n)+scenes.length)%scenes.length;
+      if(!Number.isInteger(target))return;
+      try{engine.navigate(target);update(engine.getState());if(isOpen())closePanel();}
+      catch(error){q('.sat-announcer').textContent='Não foi possível abrir o ambiente. Confira a conexão com o tour.';console.warn('[Salute a Te]',error);}
+    }
+    function closePanel(){
+      if(!isOpen())return;
+      clearTimeout(closeTimer);dialog.classList.add('is-closing');
+      const finish=()=>{hideDialog();dialog.classList.remove('is-closing');if(opener&&opener.isConnected)opener.focus();};
+      if(matchMedia('(prefers-reduced-motion:reduce)').matches||root.classList.contains('sat-reduced'))finish();else closeTimer=setTimeout(finish,180);
+    }
+    const titles={about:'Cuidado que acolhe.',scenes:'Explore os ambientes',location:'Encontre a clínica',contact:'Vamos conversar?',detail:'',menu:'Sua visita, do seu jeito',route:'Roteiro da visita'};
+    function openPanel(type,source){
+      clearTimeout(closeTimer);dialog.classList.remove('is-closing');
+      if(!isOpen())opener=source;
+      q('#sat-dialog-title').textContent=type==='detail'?scenes[index].name:titles[type];
+      if(type==='about')content.innerHTML=`<p>Conheça a Salute a Te e a proposta de uma experiência que aproxima você dos ambientes da clínica antes da sua visita.</p><p>A comunicação da marca valoriza saúde, bem-estar e atendimento humanizado. Aqui, esses valores ganham uma linguagem de luz suave, tons acolhedores e navegação tranquila.</p><p class="sat-note">${preview?'Esta apresentação utiliza imagens ilustrativas criadas por IA. Os espaços e materiais apresentados são uma proposta visual, não fotografias da clínica.':'Conheça os ambientes e entre em contato para informações sobre atendimento.'}</p><a class="sat-contact-link" href="${config.instagram}" target="_blank" rel="noopener noreferrer">${icon('instagram')} Conhecer o Instagram ${icon('arrow')}</a>`;
+      if(type==='scenes')content.innerHTML=`<label for="sat-search">Buscar ambiente</label><input class="sat-search" id="sat-search" type="search" placeholder="Digite o nome do ambiente" autocomplete="off"><div class="sat-cards">${scenes.map((s,i)=>`<button class="sat-card" data-scene="${i}" data-search="${escape(s.name)}" aria-current="${i===index}"><img src="${image(s)}" alt=""><span><b>${escape(s.name)}</b><small>0${i+1} · ${escape(s.step)}</small></span></button>`).join('')}</div><p class="sat-empty" role="status" hidden>Nenhum ambiente encontrado.</p><button class="sat-link" data-panel="route">${icon('grid')} Ver roteiro esquemático ${icon('arrow')}</button>`;
+      if(type==='location')content.innerHTML=`<p><strong>Millenium Shopping</strong><br>${escape(config.address)}</p><p>${escape(config.hours)}</p><p class="sat-note">Endereço e telefone consultados no perfil do Google. Horário consultado no Instagram. Confirme o atendimento ao agendar.</p><a class="sat-cta" href="${config.map}" target="_blank" rel="noopener noreferrer">${icon('pin')} Abrir no Google Maps ${icon('arrow')}</a>`;
+      if(type==='contact')content.innerHTML=`<p>Fale com a clínica para conhecer os atendimentos disponíveis e combinar sua visita.</p><a class="sat-contact-link" href="tel:${config.phone}">${icon('phone')} <span><strong>${config.phoneLabel}</strong><br><small>Ligar para a clínica</small></span>${icon('arrow')}</a><a class="sat-contact-link" href="${config.instagram}" target="_blank" rel="noopener noreferrer">${icon('instagram')} <span><strong>@saluteate.clinic</strong><br><small>Abrir o perfil no Instagram</small></span>${icon('arrow')}</a><p class="sat-note">O agendamento é realizado diretamente com a clínica.</p>`;
+      if(type==='detail')content.innerHTML=`<img src="${image(scenes[index])}" alt="${escape(scenes[index].name)} — ilustração"><p>${escape(scenes[index].description)}</p><button class="sat-cta" data-action="next">Conhecer ${escape(scenes[(index+1)%scenes.length].name.toLowerCase())} ${icon('arrow')}</button>`;
+      if(type==='route')content.innerHTML=`<p>Escolha uma etapa para conhecer.</p><div class="sat-route">${scenes.map((s,i)=>`<button data-scene="${i}" aria-current="${i===index}">0${i+1} — ${escape(s.name)} &nbsp; →</button>`).join('')}</div><p class="sat-note">Esquema de navegação ilustrativo, sem escala. Não é uma planta da clínica.</p>`;
+      if(type==='menu')content.innerHTML=`<button class="sat-link" data-panel="about">${icon('info')} A clínica</button><button class="sat-link" data-panel="scenes">${icon('grid')} Ambientes</button><button class="sat-link" data-panel="location">${icon('pin')} Como chegar</button><button class="sat-link" data-panel="contact">${icon('phone')} Agendar consulta</button><button class="sat-link" data-action="motion" aria-pressed="${root.classList.contains('sat-reduced')}">${icon('spark')} Reduzir movimentos: ${root.classList.contains('sat-reduced')?'ativado':'desativado'}</button><p class="sat-note">${preview?'Estudo visual · versão 0.1.1. Imagens ilustrativas por IA.':'Experiência Salute a Te · MG Tour 360°.'}</p>`;
+      if(!isOpen())showDialog();q('.sat-close').focus();
+    }
+    root.addEventListener('click',e=>{
+      const button=e.target.closest('button');if(!button)return;
+      if(button.dataset.scene!==undefined){navigate(button.dataset.scene);return;}
+      if(button.dataset.panel){openPanel(button.dataset.panel,button);return;}
+      switch(button.dataset.action){case'next':navigate(index+1);break;case'previous':navigate(index-1);break;case'close':closePanel();break;case'motion':root.classList.toggle('sat-reduced');root.classList.toggle('sat-motion-full',!root.classList.contains('sat-reduced'));openPanel('menu',button);break;case'fullscreen':{const fullscreen=document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen?.();if(fullscreen)fullscreen.catch(()=>{q('.sat-announcer').textContent='Tela cheia não disponível neste navegador.'});break;}}
+    });
+    root.addEventListener('input',e=>{if(e.target.id!=='sat-search')return;const normalize=t=>t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();const value=normalize(e.target.value.trim());const cards=qa('[data-search]');cards.forEach(card=>card.hidden=!normalize(card.dataset.search).includes(value));q('.sat-empty').hidden=cards.some(card=>!card.hidden);});
+    dialog.addEventListener('cancel',e=>{e.preventDefault();closePanel();});
+    veil.addEventListener('click',closePanel);
+    dialog.addEventListener('click',e=>{if(e.target!==dialog)return;const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closePanel();});
+    dialog.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();closePanel();return;}if(e.key!=='Tab')return;const focusable=[...dialog.querySelectorAll('button:not(:disabled),a[href],input')].filter(el=>!el.closest('[hidden]'));const first=focusable[0],last=focusable[focusable.length-1];if(e.shiftKey&&document.activeElement===first){last.focus();e.preventDefault()}else if(!e.shiftKey&&document.activeElement===last){first.focus();e.preventDefault()}});
+    const unsubscribe=engine.subscribe(update);update({index});
+    window.MGTourSkin.dispose=()=>{unsubscribe?.();clearTimeout(closeTimer);cancelAnimationFrame(viewportFrame);window.removeEventListener('resize',syncViewport);window.removeEventListener('orientationchange',syncViewport);window.removeEventListener('pageshow',syncViewport);if(window.visualViewport){visualViewport.removeEventListener('resize',syncViewport);visualViewport.removeEventListener('scroll',syncViewport)}root.remove();};
+  }};
+})();
